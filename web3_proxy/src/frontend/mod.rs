@@ -1,6 +1,6 @@
 //! `frontend` contains HTTP and websocket endpoints for use by a website or web3 wallet.
 //!
-//! Important reading about axum extractors: https://docs.rs/axum/latest/axum/extract/index.html#the-order-of-extractors
+//! Important reading about axum extractors: <https://docs.rs/axum/latest/axum/extract/index.html#the-order-of-extractors>
 
 pub mod admin;
 pub mod authorization;
@@ -164,6 +164,7 @@ pub async fn serve(
         //
         .route("/health", get(status::health))
         .route("/status", get(status::status))
+        .route("/status/backups_needed", get(status::backups_needed))
         //
         // User stuff
         //
@@ -238,18 +239,13 @@ pub async fn serve(
     let server = axum::Server::bind(&addr)
         // TODO: option to use with_connect_info. we want it in dev, but not when running behind a proxy, but not
         .serve(service)
-        // <<<<<<< HEAD
-        //         .with_graceful_shutdown(async move {
-        //             let _ = shutdown_receiver.recv().await;
-        //         })
-        //         .await
-        //         .map_err(Into::into);
-        //
-        //     let _ = shutdown_complete_sender.send(());
-        //
-        //     server
-        // =======
-        .await?;
+        .with_graceful_shutdown(async move {
+            let _ = shutdown_receiver.recv().await;
+        })
+        .await
+        .map_err(Into::into);
 
-    Ok(())
+    let _ = shutdown_complete_sender.send(());
+
+    server
 }
